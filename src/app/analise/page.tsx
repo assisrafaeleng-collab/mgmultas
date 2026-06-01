@@ -55,7 +55,6 @@ export default function AnalisePage() {
     setStepIdx(0)
     setProgress(0)
 
-    // Animate steps
     let si = 0
     const timer = setInterval(() => {
       si++
@@ -80,26 +79,30 @@ export default function AnalisePage() {
 
       if (!res.ok) throw new Error(json.error || 'Erro ao analisar')
 
-      // Save to localStorage for projects page
-      const stored = JSON.parse(localStorage.getItem('mg_projetos') || '[]')
-      stored.unshift({
-        id: Date.now().toString(),
-        criadoEm: new Date().toISOString(),
-        descricao_infracao: json.resultado.extraido?.descricao_infracao || 'Infração',
-        orgao_autuador: json.resultado.extraido?.orgao_autuador || '—',
-        artigo_ctb: json.resultado.extraido?.artigo_ctb || '—',
-        gravidade: json.resultado.extraido?.gravidade || '—',
-        probabilidade_exito: json.resultado.analise?.probabilidade_exito || 0,
-        preco_recomendado: json.resultado.venda?.preco_recomendado || 600,
-        risco_suspensao: json.resultado.extraido?.risco_suspensao || false,
-        risco_cassacao: json.resultado.extraido?.risco_cassacao || false,
-        dias_restantes: json.resultado.extraido?.dias_restantes || 30,
-        resultado: json.resultado,
-      })
-      localStorage.setItem('mg_projetos', JSON.stringify(stored.slice(0, 100)))
+      // Normaliza o resultado — suporta tanto { resultado: ... } quanto o objeto direto
+      const dados: ResultadoAnalise = json.resultado ?? json
+
+      // Salva no localStorage para a página de projetos
+      try {
+        const stored = JSON.parse(localStorage.getItem('mg_projetos') || '[]')
+        stored.unshift({
+          id: Date.now().toString(),
+          criadoEm: new Date().toISOString(),
+          descricao_infracao: dados.dadosExtraidos?.descricaoInfracao || dados.dadosExtraidos?.descricao_infracao || 'Infração',
+          orgao_autuador: dados.dadosExtraidos?.orgaoAutuador || dados.dadosExtraidos?.orgao_autuador || '—',
+          artigo_ctb: dados.dadosExtraidos?.artigoCtb || dados.dadosExtraidos?.artigo_ctb || '—',
+          gravidade: dados.dadosExtraidos?.gravidade || '—',
+          probabilidade_exito: dados.analise?.probabilidadeExito || dados.analise?.probabilidade_exito || 0,
+          preco_recomendado: dados.precificacao?.valorRecomendado || dados.precificacao?.valor_recomendado || 600,
+          risco_suspensao: dados.penalidades?.riscoSuspensao || false,
+          dias_restantes: 30,
+          resultado: dados,
+        })
+        localStorage.setItem('mg_projetos', JSON.stringify(stored.slice(0, 100)))
+      } catch (_) {}
 
       setTimeout(() => {
-        setResultado(json.resultado)
+        setResultado(dados)
         setLoading(false)
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       }, 400)
