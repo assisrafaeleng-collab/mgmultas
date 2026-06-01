@@ -63,7 +63,6 @@ Lei Seca (sempre auto suspensiva) → R$2.300,00 por multa
 Outra multa auto suspensiva (não Lei Seca) → R$1.600,00 por multa
 
 TABELA 3 — PROCESSO ADMINISTRATIVO POR ACÚMULO DE PONTOS:
-(quando somatória de pontos ultrapassa limite do perfil)
 - CNH Definitiva ou EAR: Processo Administrativo por pontuação → R$1.600,00
 - PPD: RGP-PAP → R$1.600,00
 Sobre o PA: cobra-se R$1.600 da instauração + valor Tabela 1 de CADA multa do condutor
@@ -84,16 +83,13 @@ Depois verifique o cenário geral:
 - CENÁRIO A (sem suspensão): soma apenas os valores individuais de cada multa
 - CENÁRIO B (com suspensão por acúmulo de pontos): R$1.600 PA/RGP-PAP + soma Tabela 1 de todas as multas
 - CENÁRIO C (cassação): R$2.300 fixo
-- CENÁRIO D (Lei Seca): R$2.300 por cada Lei Seca + valor individual das demais
+- CENÁRIO D (Lei Seca ou auto suspensiva): R$2.300 Lei Seca ou R$1.600 por auto suspensiva + valor individual das demais
 
-MEMÓRIA DE CÁLCULO: No campo "memoria_calculo" detalhe linha a linha:
-Ex: "Multa 1 (Lei Seca R$2.934,70) → R$2.300 | Multa 2 (R$293,47 não auto suspensiva) → R$170 | TOTAL: R$2.470"
+TIPO DE DOCUMENTO:
+- "Notificação de Autuação": condutor PODE indicar outro condutor
+- "Notificação de Penalidade": NÃO pode mais indicar condutor
 
-TIPO DE DOCUMENTO — IMPORTANTE:
-- "Notificação de Autuação": condutor PODE indicar outro condutor, tem prazo de defesa prévia
-- "Notificação de Penalidade": NÃO pode mais indicar condutor, prazo de recurso diferente
-
-RETORNE APENAS JSON VÁLIDO, sem markdown. Estrutura EXATA:
+RETORNE APENAS JSON VÁLIDO, sem markdown, sem texto antes ou depois. Estrutura EXATA:
 
 {
   "extraido": {
@@ -102,71 +98,55 @@ RETORNE APENAS JSON VÁLIDO, sem markdown. Estrutura EXATA:
     "orgao_autuador": "órgão(s) autuador(es)",
     "local_infracao": "local(is) da(s) infração(ões)",
     "codigo_infracao": "código(s) da(s) infração(ões)",
-    "descricao_infracao": "se múltiplas: 'X infrações: desc1 + desc2...'",
+    "descricao_infracao": "se múltiplas: X infrações: desc1 + desc2",
     "gravidade": "a mais grave entre todas: Leve|Média|Grave|Gravíssima",
-    "pontos_adicionar": SOMA TOTAL de pontos de todas as infrações,
+    "pontos_adicionar": 0,
     "valor_multa": "SOMA TOTAL em R$ de todas as multas",
     "prazo_recurso": "prazo mais urgente entre todas",
-    "dias_restantes": dias até o prazo mais urgente,
+    "dias_restantes": 30,
     "tipo_documento": "Notificação de Autuação|Notificação de Penalidade|Misto",
     "artigo_ctb": "artigo(s) do CTB aplicáveis",
     "instancia_recurso": "Defesa Prévia|JARI|CETRAN|CONTRAN",
-    "indicacao_condutor_possivel": true somente se tipo_documento for Notificação de Autuação,
-    "risco_suspensao": true se somatória atingir limite do perfil,
-    "risco_cassacao": true se cassação aplicável,
-    "auto_suspensivas": ["descrição das multas auto suspensivas identificadas"],
-    "lei_seca_identificada": true ou false
+    "indicacao_condutor_possivel": false,
+    "risco_suspensao": false,
+    "risco_cassacao": false,
+    "auto_suspensivas": [],
+    "lei_seca_identificada": false
   },
   "analise": {
-    "probabilidade_exito": número 0-100,
+    "probabilidade_exito": 70,
     "nivel_chance": "Alta|Média|Baixa",
-    "resumo_tecnico": "USO INTERNO — análise consolidada com soma de pontos, cenário identificado e estratégia",
-    "fundamentos_juridicos": ["fundamento 1", "fundamento 2", "fundamento 3"],
-    "pontos_atacar": ["ponto fraco 1", "ponto fraco 2"],
-    "estrategia_defesa": "estratégia interna para equipe jurídica"
+    "resumo_tecnico": "USO INTERNO — análise consolidada",
+    "fundamentos_juridicos": ["fundamento 1", "fundamento 2"],
+    "pontos_atacar": ["ponto fraco 1"],
+    "estrategia_defesa": "estratégia interna"
   },
   "venda": {
     "penalidades_sem_recurso": [
-      {"tipo": "Total de Multas", "valor": "R$ X.XXX,XX", "nivel": "critico", "descricao": "soma de todas as multas sem recorrer"},
-      {"tipo": "Pontos Totais na CNH", "valor": "X pontos acumulados", "nivel": "critico", "descricao": "total vs limite do perfil ${perfilInfo.label}"},
-      {"tipo": "Situação da CNH", "valor": "Suspensão|Cassação|Em risco", "nivel": "critico", "descricao": "situação real do condutor"},
-      {"tipo": "Impacto Financeiro Total", "valor": "R$ X.XXX,XX", "nivel": "grave", "descricao": "multas + custos indiretos estimados"}
+      {"tipo": "Total de Multas", "valor": "R$ 0,00", "nivel": "critico", "descricao": "soma de todas as multas"},
+      {"tipo": "Pontos Totais na CNH", "valor": "0 pontos", "nivel": "critico", "descricao": "total vs limite do perfil"},
+      {"tipo": "Situação da CNH", "valor": "Em risco", "nivel": "critico", "descricao": "situação real"},
+      {"tipo": "Impacto Financeiro Total", "valor": "R$ 0,00", "nivel": "grave", "descricao": "multas + custos indiretos"}
     ],
     "beneficios_recurso": [
       "Recorremos nas 3 instâncias administrativas cabíveis (Defesa Prévia, JARI e CETRAN/CONTRAN)",
-      "Analisamos todas as notificações em conjunto para a melhor estratégia consolidada",
-      "Nossa equipe cuida de todo o processo — você não precisa fazer nada",
-      "benefício específico para o perfil e quantidade de infrações"
+      "Analisamos todas as notificações em conjunto para a melhor estratégia",
+      "Nossa equipe cuida de todo o processo",
+      "Você não precisa fazer nada"
     ],
     "argumentos_venda": [
-      {
-        "tipo": "perigo",
-        "titulo": "título sobre risco total e concreto",
-        "corpo": "Mostre impacto TOTAL: soma das multas, pontos, risco de suspensão/cassação. PROIBIDO: erros técnicos, artigos, irregularidades."
-      },
-      {
-        "tipo": "juridico",
-        "titulo": "título de autoridade da MG Multas",
-        "corpo": "Transmita autoridade SEM revelar mérito. NUNCA explique o que está errado ou como será feito o recurso."
-      },
-      {
-        "tipo": "urgencia",
-        "titulo": "título com prazo mais urgente",
-        "corpo": "Use o prazo mais próximo. PROIBIDO: % numérico e detalhes jurídicos."
-      },
-      {
-        "tipo": "beneficio",
-        "titulo": "título do benefício financeiro total",
-        "corpo": "Compare investimento vs custo de não recorrer. Use 'alta probabilidade de êxito' se probabilidade_exito >= 50, ou 'perspectivas favoráveis' se menor. NUNCA use % numérico."
-      }
+      {"tipo": "perigo", "titulo": "título do risco", "corpo": "corpo do argumento de risco — sem revelar mérito jurídico"},
+      {"tipo": "juridico", "titulo": "título de autoridade", "corpo": "corpo transmitindo autoridade sem revelar estratégia"},
+      {"tipo": "urgencia", "titulo": "título de urgência", "corpo": "corpo com prazo real — sem % numérico"},
+      {"tipo": "beneficio", "titulo": "título do benefício", "corpo": "corpo com benefício financeiro — use alta probabilidade de êxito se >= 50, perspectivas favoráveis se menor"}
     ],
-    "script_abertura": "Script 4-6 linhas. NUNCA: % numérico, erros, estratégia jurídica. SEMPRE: 3 instâncias, prazo urgente, análise consolidada do caso.",
-    "cenario_precificacao": "A|B|C|D — identifique o cenário aplicável",
-    "memoria_calculo": "detalhamento linha a linha: Multa 1 (desc → valor serviço) | Multa 2 (desc → valor serviço) | + PA R$1.600 se aplicável | TOTAL: R$X",
-    "preco_recomendado": número inteiro — SOMA TOTAL conforme regras acima,
-    "preco_minimo": número inteiro — 10% abaixo do recomendado,
-    "preco_maximo": número inteiro — 15% acima do recomendado,
-    "justificativa_preco": "cite o cenário e a memória de cálculo resumida"
+    "script_abertura": "script de 4-6 linhas sem % numérico, sem revelar mérito, mencionando 3 instâncias e prazo",
+    "cenario_precificacao": "A|B|C|D",
+    "memoria_calculo": "Multa 1 (desc → R$X) | Multa 2 (desc → R$X) | PA R$1.600 se aplicável | TOTAL: R$X",
+    "preco_recomendado": 0,
+    "preco_minimo": 0,
+    "preco_maximo": 0,
+    "justificativa_preco": "justificativa com cenário e memória resumida"
   }
 }
 
@@ -225,10 +205,18 @@ export async function POST(request: NextRequest) {
     const textContent = response.content.find((block) => block.type === "text")
     if (!textContent || textContent.type !== "text") throw new Error("Resposta inválida da IA")
 
-    const cleanJson = textContent.text.replace(/```json|```/g, "").trim()
-    const resultado = JSON.parse(cleanJson)
+    const rawText = textContent.text.trim()
 
+    // Tenta extrair JSON mesmo se vier com texto antes/depois
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error("Resposta da IA não contém JSON:", rawText.substring(0, 500))
+      throw new Error(`IA retornou resposta inesperada: ${rawText.substring(0, 200)}`)
+    }
+
+    const resultado = JSON.parse(jsonMatch[0])
     return NextResponse.json(resultado)
+
   } catch (error) {
     console.error("Erro na análise:", error)
     const message = error instanceof Error ? error.message : "Erro desconhecido"
