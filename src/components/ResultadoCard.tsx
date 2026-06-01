@@ -2,7 +2,7 @@ import type { ResultadoAnalise, ArgumentoVenda, Penalidade } from '@/lib/types'
 
 const ARG_LABELS: Record<ArgumentoVenda['tipo'], string> = {
   perigo: '⚠ Risco Real',
-  juridico: '⚖ Fundamento Jurídico',
+  juridico: '⚖ Nossa Análise Técnica',
   urgencia: '⏰ Urgência',
   beneficio: '✓ Benefício ao Cliente',
 }
@@ -52,7 +52,7 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
             ['Infração', e.descricao_infracao],
             ['Artigo CTB', e.artigo_ctb],
             ['Gravidade', e.gravidade, e.gravidade === 'Gravíssima' || e.gravidade === 'Grave' ? 'red' : 'amber'],
-            [`Pontos a Acrescentar`, `+${e.pontos_adicionar} pts`, 'red'],
+            ['Pontos a Acrescentar', `+${e.pontos_adicionar} pts`, 'red'],
             ['Valor da Multa', e.valor_multa, 'red'],
             [`Prazo — ${e.instancia_recurso}`, `${e.prazo_recurso}${urgente ? ' ⚠' : ''}`, urgente ? 'red' : 'amber'],
             ['Risco Suspensão', e.risco_suspensao ? 'Sim — ação urgente' : 'Não', e.risco_suspensao ? 'red' : 'green'],
@@ -67,24 +67,21 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
 
         <div className="divider" />
 
+        {/* Sem % — apenas nível de probabilidade */}
         <div className={`verdict-hero ${nivelClass}`}>
-          <div className="vh-eyebrow">Chance de êxito no recurso</div>
-          <div className="vh-title">{a.probabilidade_exito}% — {a.nivel_chance} Probabilidade</div>
+          <div className="vh-eyebrow">Avaliação do caso</div>
+          <div className="vh-title">{a.nivel_chance} Probabilidade de Êxito</div>
           <div className="vh-sub">{a.resumo_tecnico}</div>
         </div>
-
-        {a.fundamentos_juridicos?.map((f, i) => (
-          <div key={i} className="fundamento-item">{f}</div>
-        ))}
       </div>
 
       {/* Penalidades */}
       <div className="card">
         <div className="card-title">
-          <i className="ti ti-skull" aria-hidden="true" /> Penalidades Sem Recurso
+          <i className="ti ti-skull" aria-hidden="true" /> O Que Acontece Se Não Recorrer
         </div>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-          O que o cliente vai enfrentar se não agir agora:
+          Mostre ao cliente o que está em jogo:
         </p>
         <div className="penalidade-grid">
           {v.penalidades_sem_recurso?.map((p, i) => (
@@ -101,7 +98,7 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
       {/* Benefícios */}
       <div className="card">
         <div className="card-title">
-          <i className="ti ti-shield-check" aria-hidden="true" /> Benefícios de Contratar o Recurso
+          <i className="ti ti-shield-check" aria-hidden="true" /> Benefícios de Contratar a MG Multas
         </div>
         {v.beneficios_recurso?.map((b, i) => (
           <div key={i} className="beneficio-row">
@@ -117,7 +114,7 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
           <i className="ti ti-message-bolt" aria-hidden="true" /> Argumentos de Venda
         </div>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-          Use estes argumentos na ordem apresentada ao falar com o cliente:
+          Use estes argumentos na ordem ao falar com o cliente. Não entre no mérito jurídico.
         </p>
         {v.argumentos_venda?.map((ag, i) => (
           <div key={i} className={`arg-card ${ag.tipo}`}>
@@ -135,7 +132,8 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
         </div>
         <div className="script-box">"{v.script_abertura}"</div>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-          Nunca prometa resultado garantido. O resultado depende exclusivamente do órgão julgador.
+          ⚠ Nunca prometa resultado garantido. Nunca explique como será feito o recurso.
+          O mérito jurídico é exclusivo da nossa equipe especializada.
         </p>
       </div>
 
@@ -160,12 +158,11 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
           <div className="price-card">
             <div className="price-lbl">Teto</div>
             <div className="price-val">R$ {v.preco_maximo?.toLocaleString('pt-BR')}</div>
-            <div className="price-note">Casos críticos / ação judicial</div>
+            <div className="price-note">Casos críticos com risco de suspensão/cassação</div>
           </div>
         </div>
         <p style={{ fontSize: 10, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-          Ticket médio da rede: R$ 600 • Meta: 55 vendas/mês = R$ 33.000 •
-          Nunca ofereça devolução condicional por resultado
+          Nunca ofereça devolução condicional por resultado. Venda o serviço, não o resultado.
         </p>
       </div>
 
