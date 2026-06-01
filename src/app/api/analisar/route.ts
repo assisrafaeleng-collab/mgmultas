@@ -5,50 +5,7 @@ export const maxDuration = 60;
 
 const client = new Anthropic();
 
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-
-    if (!file) {
-      return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
-    }
-
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const mediaType = file.type as "application/pdf" | "image/jpeg" | "image/png" | "image/webp";
-
-    const isImage = mediaType.startsWith("image/");
-
-    const contentBlock = isImage
-      ? {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: mediaType,
-            data: base64,
-          },
-        }
-      : {
-          type: "document" as const,
-          source: {
-            type: "base64" as const,
-            media_type: "application/pdf" as const,
-            data: base64,
-          },
-        };
-
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 4000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            contentBlock,
-            {
-              type: "text",
-              text: `Você é um especialista em Código de Trânsito Brasileiro (CTB) e defesa de multas. Analise esta notificação de multa de trânsito e retorne um JSON com a seguinte estrutura (apenas JSON, sem markdown):
+const PROMPT = `Você é um especialista em Código de Trânsito Brasileiro (CTB) e defesa de multas. Analise esta notificação de multa de trânsito e retorne um JSON com a seguinte estrutura (apenas JSON, sem markdown):
 
 {
   "dadosExtraidos": {
@@ -57,7 +14,7 @@ export async function POST(request: NextRequest) {
     "dataInfracao": "data da infração",
     "prazoRecurso": "prazo para recurso",
     "valorMulta": "valor em reais",
-    "pontosCarteira": número de pontos,
+    "pontosCarteira": 0,
     "codigoInfracao": "código da infração",
     "descricaoInfracao": "descrição completa",
     "artigoCtb": "artigo do CTB aplicado",
@@ -67,16 +24,16 @@ export async function POST(request: NextRequest) {
     "condutor": "nome do condutor se disponível"
   },
   "analise": {
-    "probabilidadeExito": número entre 0 e 100,
+    "probabilidadeExito": 70,
     "classificacaoRisco": "Alto/Médio/Baixo",
     "fundamentosJuridicos": ["fundamento 1", "fundamento 2", "fundamento 3"],
     "estrategiaDefesa": ["passo 1", "passo 2", "passo 3"],
     "pontosFracosProsecucao": ["ponto fraco 1", "ponto fraco 2"],
-    "prazoUrgente": true ou false
+    "prazoUrgente": false
   },
   "penalidades": {
     "semRecurso": ["penalidade 1", "penalidade 2", "penalidade 3"],
-    "riscoSuspensao": true ou false,
+    "riscoSuspensao": false,
     "impactoProfissional": "descrição do impacto para motoristas profissionais"
   },
   "beneficiosRecurso": ["benefício 1", "benefício 2", "benefício 3"],
@@ -88,17 +45,72 @@ export async function POST(request: NextRequest) {
   },
   "scriptAtendimento": "texto completo do script de abertura para o consultor apresentar a análise ao cliente",
   "precificacao": {
-    "valorMinimo": número em reais,
-    "valorRecomendado": número em reais,
-    "valorTeto": número em reais,
+    "valorMinimo": 150,
+    "valorRecomendado": 250,
+    "valorTeto": 400,
     "justificativa": "justificativa para o preço recomendado"
   }
-}`,
-            },
-          ],
-        },
-      ],
-    });
+}`;
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+
+    if (!file) {
+      return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
+    }
+
+    const bytes = await file.arrayBuffer();
+    const base64 = Buffer.from(bytes).toString("base64");
+    const isPdf = file.type === "application/pdf";
+
+    let response;
+
+    if (isPdf) {
+      response = await client.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 4000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64,
+                },
+              },
+              { type: "text", text: PROMPT },
+            ],
+          },
+        ],
+      });
+    } else {
+      const imgType = file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+      response = await client.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 4000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: imgType,
+                  data: base64,
+                },
+              },
+              { type: "text", text: PROMPT },
+            ],
+          },
+        ],
+      });
+    }
 
     const textContent = response.content.find((block) => block.type === "text");
     if (!textContent || textContent.type !== "text") {
