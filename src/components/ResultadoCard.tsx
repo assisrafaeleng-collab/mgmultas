@@ -67,11 +67,21 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
 
         <div className="divider" />
 
-        {/* Sem % — apenas nível de probabilidade */}
+        {/* Avaliação — com % e nível para o consultor */}
         <div className={`verdict-hero ${nivelClass}`}>
-          <div className="vh-eyebrow">Avaliação do caso</div>
-          <div className="vh-title">{a.nivel_chance} Probabilidade de Êxito</div>
+          <div className="vh-eyebrow">Avaliação Interna do Caso</div>
+          <div className="vh-title">{a.probabilidade_exito}% — {a.nivel_chance} Probabilidade de Êxito</div>
           <div className="vh-sub">{a.resumo_tecnico}</div>
+        </div>
+
+        {/* Fundamentos jurídicos — visíveis apenas para o consultor */}
+        <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(255,200,0,0.06)', borderLeft: '3px solid #f59e0b', borderRadius: 6 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', marginBottom: 8, letterSpacing: 1 }}>
+            🔒 USO INTERNO — NÃO COMPARTILHAR COM O CLIENTE
+          </div>
+          {a.fundamentos_juridicos?.map((f, i) => (
+            <div key={i} className="fundamento-item">{f}</div>
+          ))}
         </div>
       </div>
 
@@ -114,7 +124,7 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
           <i className="ti ti-message-bolt" aria-hidden="true" /> Argumentos de Venda
         </div>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-          Use estes argumentos na ordem ao falar com o cliente. Não entre no mérito jurídico.
+          Use estes argumentos ao falar com o cliente. Não revele como será feito o recurso.
         </p>
         {v.argumentos_venda?.map((ag, i) => (
           <div key={i} className={`arg-card ${ag.tipo}`}>
@@ -132,8 +142,7 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
         </div>
         <div className="script-box">"{v.script_abertura}"</div>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-          ⚠ Nunca prometa resultado garantido. Nunca explique como será feito o recurso.
-          O mérito jurídico é exclusivo da nossa equipe especializada.
+          ⚠ Nunca prometa resultado garantido. Nunca explique como será feito o recurso nem cite os fundamentos jurídicos ao cliente.
         </p>
       </div>
 
@@ -153,12 +162,12 @@ export default function ResultadoCard({ resultado, onNova }: Props) {
             <div className="price-tag">IDEAL</div>
             <div className="price-lbl">Recomendado</div>
             <div className="price-val">R$ {v.preco_recomendado?.toLocaleString('pt-BR')}</div>
-            <div className="price-note">Acompanhamento completo</div>
+            <div className="price-note">Acompanhamento nas 3 instâncias cabíveis</div>
           </div>
           <div className="price-card">
             <div className="price-lbl">Teto</div>
             <div className="price-val">R$ {v.preco_maximo?.toLocaleString('pt-BR')}</div>
-            <div className="price-note">Casos críticos com risco de suspensão/cassação</div>
+            <div className="price-note">Casos com risco de suspensão ou cassação</div>
           </div>
         </div>
         <p style={{ fontSize: 10, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
