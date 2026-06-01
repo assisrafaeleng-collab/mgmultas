@@ -5,52 +5,60 @@ export const maxDuration = 60;
 
 const client = new Anthropic();
 
-const PROMPT = `Você é um especialista em Código de Trânsito Brasileiro (CTB) e defesa de multas. Analise esta notificação de multa de trânsito e retorne um JSON com a seguinte estrutura (apenas JSON, sem markdown):
+const PROMPT = `Você é um especialista em Código de Trânsito Brasileiro (CTB) e defesa de multas. Analise esta notificação de multa de trânsito e retorne APENAS um JSON válido, sem markdown, sem texto adicional, com esta estrutura exata:
 
 {
-  "dadosExtraidos": {
-    "numeroAuto": "número do auto de infração",
-    "orgaoAutuador": "órgão que emitiu a multa",
-    "dataInfracao": "data da infração",
-    "prazoRecurso": "prazo para recurso",
-    "valorMulta": "valor em reais",
-    "pontosCarteira": 0,
-    "codigoInfracao": "código da infração",
-    "descricaoInfracao": "descrição completa",
-    "artigoCtb": "artigo do CTB aplicado",
-    "gravidade": "Leve/Média/Grave/Gravíssima",
-    "localInfracao": "local onde ocorreu",
-    "veiculo": "placa e modelo se disponível",
-    "condutor": "nome do condutor se disponível"
+  "extraido": {
+    "numero_auto": "número do auto de infração",
+    "data_infracao": "data da infração",
+    "orgao_autuador": "órgão autuador",
+    "local_infracao": "local da infração",
+    "codigo_infracao": "código da infração",
+    "descricao_infracao": "descrição completa da infração",
+    "gravidade": "Grave",
+    "pontos_adicionar": 5,
+    "valor_multa": "R$ 000,00",
+    "prazo_recurso": "30 dias",
+    "dias_restantes": 30,
+    "tipo_documento": "Notificação de Autuação",
+    "artigo_ctb": "Art. 000 do CTB",
+    "instancia_recurso": "DETRAN/JARI",
+    "indicacao_condutor_possivel": false,
+    "risco_suspensao": false,
+    "risco_cassacao": false
   },
   "analise": {
-    "probabilidadeExito": 70,
-    "classificacaoRisco": "Alto/Médio/Baixo",
-    "fundamentosJuridicos": ["fundamento 1", "fundamento 2", "fundamento 3"],
-    "estrategiaDefesa": ["passo 1", "passo 2", "passo 3"],
-    "pontosFracosProsecucao": ["ponto fraco 1", "ponto fraco 2"],
-    "prazoUrgente": false
+    "probabilidade_exito": 70,
+    "nivel_chance": "Média",
+    "resumo_tecnico": "resumo técnico da análise",
+    "fundamentos_juridicos": ["fundamento 1", "fundamento 2", "fundamento 3"],
+    "pontos_atacar": ["ponto fraco 1", "ponto fraco 2"],
+    "estrategia_defesa": "descrição da estratégia de defesa recomendada"
   },
-  "penalidades": {
-    "semRecurso": ["penalidade 1", "penalidade 2", "penalidade 3"],
-    "riscoSuspensao": false,
-    "impactoProfissional": "descrição do impacto para motoristas profissionais"
-  },
-  "beneficiosRecurso": ["benefício 1", "benefício 2", "benefício 3"],
-  "argumentosVenda": {
-    "risco": "argumento focado no risco de não recorrer",
-    "juridico": "argumento jurídico principal",
-    "urgencia": "argumento de urgência",
-    "beneficio": "principal benefício de contratar"
-  },
-  "scriptAtendimento": "texto completo do script de abertura para o consultor apresentar a análise ao cliente",
-  "precificacao": {
-    "valorMinimo": 150,
-    "valorRecomendado": 250,
-    "valorTeto": 400,
-    "justificativa": "justificativa para o preço recomendado"
+  "venda": {
+    "penalidades_sem_recurso": [
+      { "tipo": "Multa", "valor": "R$ 000,00", "nivel": "grave", "descricao": "descrição da penalidade" },
+      { "tipo": "Pontos", "valor": "X pontos na CNH", "nivel": "moderado", "descricao": "descrição do impacto dos pontos" }
+    ],
+    "beneficios_recurso": ["benefício 1", "benefício 2", "benefício 3"],
+    "argumentos_venda": [
+      { "tipo": "perigo", "titulo": "título do argumento de perigo", "corpo": "corpo do argumento" },
+      { "tipo": "juridico", "titulo": "título do argumento jurídico", "corpo": "corpo do argumento" },
+      { "tipo": "urgencia", "titulo": "título do argumento de urgência", "corpo": "corpo do argumento" },
+      { "tipo": "beneficio", "titulo": "título do benefício", "corpo": "corpo do argumento" }
+    ],
+    "script_abertura": "texto completo do script para o consultor apresentar ao cliente",
+    "preco_minimo": 150,
+    "preco_recomendado": 300,
+    "preco_maximo": 500,
+    "justificativa_preco": "justificativa para o preço recomendado"
   }
-}`;
+}
+
+Para gravidade use exatamente: "Leve", "Média", "Grave" ou "Gravíssima"
+Para nivel_chance use exatamente: "Alta", "Média" ou "Baixa"
+Para nivel das penalidades use exatamente: "critico", "grave" ou "moderado"
+Para tipo dos argumentos use exatamente: "perigo", "juridico", "urgencia" ou "beneficio"`;
 
 export async function POST(request: NextRequest) {
   try {

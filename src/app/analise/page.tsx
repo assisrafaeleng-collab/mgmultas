@@ -79,8 +79,7 @@ export default function AnalisePage() {
 
       if (!res.ok) throw new Error(json.error || 'Erro ao analisar')
 
-      // Normaliza o resultado — suporta tanto { resultado: ... } quanto o objeto direto
-      const dados: ResultadoAnalise = json.resultado ?? json
+      const dados: ResultadoAnalise = json
 
       // Salva no localStorage para a página de projetos
       try {
@@ -88,14 +87,15 @@ export default function AnalisePage() {
         stored.unshift({
           id: Date.now().toString(),
           criadoEm: new Date().toISOString(),
-          descricao_infracao: dados.dadosExtraidos?.descricaoInfracao || dados.dadosExtraidos?.descricao_infracao || 'Infração',
-          orgao_autuador: dados.dadosExtraidos?.orgaoAutuador || dados.dadosExtraidos?.orgao_autuador || '—',
-          artigo_ctb: dados.dadosExtraidos?.artigoCtb || dados.dadosExtraidos?.artigo_ctb || '—',
-          gravidade: dados.dadosExtraidos?.gravidade || '—',
-          probabilidade_exito: dados.analise?.probabilidadeExito || dados.analise?.probabilidade_exito || 0,
-          preco_recomendado: dados.precificacao?.valorRecomendado || dados.precificacao?.valor_recomendado || 600,
-          risco_suspensao: dados.penalidades?.riscoSuspensao || false,
-          dias_restantes: 30,
+          descricao_infracao: dados.extraido?.descricao_infracao || 'Infração',
+          orgao_autuador: dados.extraido?.orgao_autuador || '—',
+          artigo_ctb: dados.extraido?.artigo_ctb || '—',
+          gravidade: dados.extraido?.gravidade || '—',
+          probabilidade_exito: dados.analise?.probabilidade_exito || 0,
+          preco_recomendado: dados.venda?.preco_recomendado || 300,
+          risco_suspensao: dados.extraido?.risco_suspensao || false,
+          risco_cassacao: dados.extraido?.risco_cassacao || false,
+          dias_restantes: dados.extraido?.dias_restantes || 30,
           resultado: dados,
         })
         localStorage.setItem('mg_projetos', JSON.stringify(stored.slice(0, 100)))
