@@ -5,14 +5,14 @@ import type { ResultadoAnalise } from '@/lib/types'
 import ResultadoCard from '@/components/ResultadoCard'
 
 const STEPS = [
-  'Lendo e decodificando o documento...',
-  'Extraindo dados da notificação...',
+  'Lendo e decodificando os documentos...',
+  'Extraindo dados de cada notificação...',
   'Identificando artigos do CTB aplicáveis...',
-  'Calculando pontos e risco de suspensão...',
+  'Somando pontuação total do condutor...',
+  'Calculando risco real de suspensão/cassação...',
   'Analisando probabilidade de êxito recursal...',
   'Gerando argumentos de venda personalizados...',
-  'Calculando penalidades e benefícios...',
-  'Finalizando dossiê completo...',
+  'Finalizando dossiê consolidado...',
 ]
 
 type PerfilCNH = 'ppd' | 'definitiva' | 'ear' | ''
@@ -46,7 +46,7 @@ const PERFIS = [
 
 export default function AnalisePage() {
   const [perfil, setPerfil] = useState<PerfilCNH>('')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -56,29 +56,34 @@ export default function AnalisePage() {
   const inputRef = useRef<HTMLInputElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
-  const handleFile = useCallback((f: File) => {
+  const handleFiles = useCallback((newFiles: File[]) => {
     const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowed.includes(f.type)) { alert('Formato não suportado. Use PDF, JPG ou PNG.'); return }
-    if (f.size > 20 * 1024 * 1024) { alert('Arquivo muito grande. Máximo 20MB.'); return }
-    setFile(f)
+    const valid = newFiles.filter(f => {
+      if (!allowed.includes(f.type)) { alert(`Formato não suportado: ${f.name}`); return false }
+      if (f.size > 20 * 1024 * 1024) { alert(`Arquivo muito grande: ${f.name}`); return false }
+      return true
+    })
+    setFiles(prev => {
+      const names = new Set(prev.map(f => f.name))
+      return [...prev, ...valid.filter(f => !names.has(f.name))]
+    })
     setResultado(null)
     setErro(null)
   }, [])
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false)
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
+    handleFiles(Array.from(e.dataTransfer.files))
   }
 
-  const removeFile = () => {
-    setFile(null)
+  const removeFile = (idx: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== idx))
     setResultado(null)
     setErro(null)
-    if (inputRef.current) inputRef.current.value = ''
   }
 
   const runAnalysis = async () => {
-    if (!file || !perfil) return
+    if (files.length === 0 || !perfil) return
     setLoading(true)
     setErro(null)
     setResultado(null)
@@ -91,15 +96,14 @@ export default function AnalisePage() {
       if (si < STEPS.length) {
         setStepIdx(si)
         setProgress(Math.round((si / STEPS.length) * 90))
-      } else {
-        clearInterval(timer)
-      }
-    }, 500)
+      } else clearInterval(timer)
+    }, 600)
 
     try {
       const fd = new FormData()
-      fd.append('file', file)
+      files.forEach(f => fd.append('files', f))
       fd.append('perfil', perfil)
+      fd.append('total_multas', String(files.length))
 
       const res = await fetch('/api/analisar', { method: 'POST', body: fd })
       const json = await res.json()
@@ -118,7 +122,8 @@ export default function AnalisePage() {
           id: Date.now().toString(),
           criadoEm: new Date().toISOString(),
           perfil_cnh: perfil,
-          descricao_infracao: dados.extraido?.descricao_infracao || 'Infração',
+          total_multas: files.length,
+          descricao_infracao: dados.extraido?.descricao_infracao || 'Múltiplas infrações',
           orgao_autuador: dados.extraido?.orgao_autuador || '—',
           artigo_ctb: dados.extraido?.artigo_ctb || '—',
           gravidade: dados.extraido?.gravidade || '—',
@@ -146,13 +151,14 @@ export default function AnalisePage() {
   }
 
   const resetForm = () => {
-    removeFile()
+    setFiles([])
     setPerfil('')
     setResultado(null)
     setErro(null)
     setLoading(false)
     setStepIdx(-1)
     setProgress(0)
+    if (inputRef.current) inputRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -169,13 +175,13 @@ export default function AnalisePage() {
 
       <div className="page">
 
-        {/* Step 1 — Perfil do condutor */}
+        {/* Passo 1 — Perfil */}
         <div className="card">
           <div className="card-title">
             <i className="ti ti-user-check" aria-hidden="true" /> Passo 1 — Perfil da CNH do Condutor
           </div>
           <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-            Selecione o tipo de habilitação para calcular o risco real de suspensão ou cassação.
+            Selecione o tipo de habilitação para calcular corretamente o risco de suspensão ou cassação.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -184,16 +190,11 @@ export default function AnalisePage() {
                 key={p.id}
                 onClick={() => setPerfil(p.id)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '14px 16px',
-                  borderRadius: 10,
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '14px 16px', borderRadius: 10,
                   border: `2px solid ${perfil === p.id ? p.cor : 'var(--border)'}`,
                   background: perfil === p.id ? `${p.cor}15` : 'var(--card)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s',
+                  cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
                 }}
               >
                 <i className={`ti ${p.icon}`} style={{ fontSize: 24, color: p.cor, flexShrink: 0 }} />
@@ -201,9 +202,7 @@ export default function AnalisePage() {
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
                     {p.label} — {p.sub}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                    {p.alerta}
-                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{p.alerta}</div>
                 </div>
                 {perfil === p.id && (
                   <i className="ti ti-circle-check" style={{ color: p.cor, fontSize: 20, flexShrink: 0 }} />
@@ -214,15 +213,12 @@ export default function AnalisePage() {
 
           {perfilSelecionado && (
             <div style={{
-              marginTop: 12,
-              padding: '10px 14px',
-              borderRadius: 8,
+              marginTop: 12, padding: '10px 14px', borderRadius: 8,
               background: `${perfilSelecionado.cor}10`,
               border: `1px solid ${perfilSelecionado.cor}40`,
-              fontSize: 12,
-              color: 'var(--text)',
+              fontSize: 12, color: 'var(--text)',
             }}>
-              <strong>Perfil selecionado:</strong> {perfilSelecionado.label} ({perfilSelecionado.sub}) —{' '}
+              <strong>Perfil selecionado:</strong>{' '}
               {perfil === 'ppd' && 'Cassação imediata com 1 grave/gravíssima ou 2 médias. Prazo de 2 anos reinicia do zero.'}
               {perfil === 'definitiva' && 'Limite de 20, 30 ou 40 pts conforme infrações nos últimos 12 meses.'}
               {perfil === 'ear' && 'Limite fixo de 40 pontos em qualquer situação. Suspensão impacta diretamente o sustento profissional.'}
@@ -230,11 +226,22 @@ export default function AnalisePage() {
           )}
         </div>
 
-        {/* Step 2 — Upload */}
+        {/* Passo 2 — Upload múltiplo */}
         <div className="card">
           <div className="card-title">
-            <i className="ti ti-upload" aria-hidden="true" /> Passo 2 — Enviar Notificação de Infração
+            <i className="ti ti-upload" aria-hidden="true" /> Passo 2 — Enviar Notificações
+            {files.length > 0 && (
+              <span style={{
+                marginLeft: 8, background: 'var(--red)', color: '#fff',
+                borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 700,
+              }}>
+                {files.length} {files.length === 1 ? 'arquivo' : 'arquivos'}
+              </span>
+            )}
           </div>
+          <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+            Envie <strong>todas as notificações do mesmo condutor</strong>. O sistema somará os pontos e analisará o risco consolidado.
+          </p>
 
           <div
             className={`upload-zone${dragOver ? ' drag-over' : ''}`}
@@ -246,30 +253,48 @@ export default function AnalisePage() {
               ref={inputRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.webp"
-              onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
+              multiple
+              onChange={e => e.target.files && handleFiles(Array.from(e.target.files))}
             />
-            <i className="ti ti-file-text upload-icon" aria-hidden="true" />
+            <i className="ti ti-files upload-icon" aria-hidden="true" />
             <div className="upload-title">ARRASTE OU CLIQUE AQUI</div>
-            <p className="upload-sub">Envie a notificação de autuação ou penalidade do cliente</p>
+            <p className="upload-sub">Selecione uma ou mais notificações do mesmo condutor</p>
             <div className="format-badges">
-              {['PDF','JPG','PNG','FOTO DO DOCUMENTO'].map(f => (
+              {['PDF','JPG','PNG','MÚLTIPLOS ARQUIVOS'].map(f => (
                 <span key={f} className="fmt">{f}</span>
               ))}
             </div>
           </div>
 
-          {file && (
-            <div className="file-preview">
-              <i className="ti ti-file-check" style={{ fontSize: 20, color: 'var(--red)' }} aria-hidden="true" />
-              <div className="file-preview-info">
-                <div className="file-preview-name">{file.name}</div>
-                <div className="file-preview-size">
-                  {(file.size / 1024).toFixed(0)} KB — {file.type.split('/')[1].toUpperCase()}
+          {/* Lista de arquivos */}
+          {files.length > 0 && (
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {files.map((f, i) => (
+                <div key={i} className="file-preview">
+                  <i className="ti ti-file-check" style={{ fontSize: 20, color: 'var(--red)' }} />
+                  <div className="file-preview-info">
+                    <div className="file-preview-name">Notificação {i + 1} — {f.name}</div>
+                    <div className="file-preview-size">
+                      {(f.size / 1024).toFixed(0)} KB — {f.type.split('/')[1].toUpperCase()}
+                    </div>
+                  </div>
+                  <button className="btn-remove" onClick={() => removeFile(i)} aria-label="Remover">
+                    <i className="ti ti-x" />
+                  </button>
                 </div>
+              ))}
+
+              {/* Resumo de pontos estimado */}
+              <div style={{
+                padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(239,68,68,0.07)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                fontSize: 12,
+              }}>
+                <i className="ti ti-alert-triangle" style={{ color: 'var(--red)', marginRight: 6 }} />
+                <strong>{files.length} notificação(ões) carregada(s).</strong>{' '}
+                A IA irá ler todas, somar a pontuação total e verificar se o condutor já estourou o limite do perfil selecionado.
               </div>
-              <button className="btn-remove" onClick={removeFile} aria-label="Remover arquivo">
-                <i className="ti ti-x" aria-hidden="true" />
-              </button>
             </div>
           )}
 
@@ -283,11 +308,11 @@ export default function AnalisePage() {
             className="btn btn-primary btn-full"
             style={{ marginTop: 14 }}
             onClick={runAnalysis}
-            disabled={!file || !perfil || loading}
+            disabled={files.length === 0 || !perfil || loading}
           >
             {loading
-              ? <><span className="spinner" /> Analisando...</>
-              : <><i className="ti ti-brain" aria-hidden="true" /> Analisar Notificação com IA</>
+              ? <><span className="spinner" /> Analisando {files.length} notificação(ões)...</>
+              : <><i className="ti ti-brain" aria-hidden="true" /> Analisar {files.length > 1 ? `${files.length} Notificações` : 'Notificação'} com IA</>
             }
           </button>
         </div>
@@ -303,11 +328,8 @@ export default function AnalisePage() {
             </div>
             <div className="step-list">
               {STEPS.map((s, i) => (
-                <div
-                  key={i}
-                  className={`step-item${i < stepIdx ? ' done' : i === stepIdx ? ' active' : ''}`}
-                >
-                  <i className={`ti ${i < stepIdx ? 'ti-circle-check' : i === stepIdx ? 'ti-loader' : 'ti-circle'}`} aria-hidden="true" />
+                <div key={i} className={`step-item${i < stepIdx ? ' done' : i === stepIdx ? ' active' : ''}`}>
+                  <i className={`ti ${i < stepIdx ? 'ti-circle-check' : i === stepIdx ? 'ti-loader' : 'ti-circle'}`} />
                   {s}
                 </div>
               ))}
@@ -317,8 +339,8 @@ export default function AnalisePage() {
 
         {erro && (
           <div className="card" style={{ marginTop: 14, textAlign: 'center', padding: 32 }}>
-            <i className="ti ti-alert-circle" style={{ fontSize: 32, color: 'var(--red)', display: 'block', marginBottom: 10 }} aria-hidden="true" />
-            <p style={{ fontWeight: 600 }}>Erro ao processar o documento</p>
+            <i className="ti ti-alert-circle" style={{ fontSize: 32, color: 'var(--red)', display: 'block', marginBottom: 10 }} />
+            <p style={{ fontWeight: 600 }}>Erro ao processar os documentos</p>
             <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>{erro}</p>
           </div>
         )}
