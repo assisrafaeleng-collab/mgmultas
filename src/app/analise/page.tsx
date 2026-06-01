@@ -15,7 +15,37 @@ const STEPS = [
   'Finalizando dossiê completo...',
 ]
 
+type PerfilCNH = 'ppd' | 'definitiva' | 'ear' | ''
+
+const PERFIS = [
+  {
+    id: 'ppd' as PerfilCNH,
+    label: 'PPD',
+    sub: 'Permissão Para Dirigir',
+    icon: 'ti-id-badge',
+    alerta: '1 grave/gravíssima ou 2 médias = cassação imediata',
+    cor: '#ef4444',
+  },
+  {
+    id: 'definitiva' as PerfilCNH,
+    label: 'CNH Definitiva',
+    sub: 'Condutor comum',
+    icon: 'ti-license',
+    alerta: 'Limite varia: 20, 30 ou 40 pts conforme histórico (12 meses)',
+    cor: '#f59e0b',
+  },
+  {
+    id: 'ear' as PerfilCNH,
+    label: 'EAR',
+    sub: 'Exerce Atividade Remunerada',
+    icon: 'ti-truck',
+    alerta: 'Sempre 40 pontos — independente do tipo de infração',
+    cor: '#3b82f6',
+  },
+]
+
 export default function AnalisePage() {
+  const [perfil, setPerfil] = useState<PerfilCNH>('')
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -48,7 +78,7 @@ export default function AnalisePage() {
   }
 
   const runAnalysis = async () => {
-    if (!file) return
+    if (!file || !perfil) return
     setLoading(true)
     setErro(null)
     setResultado(null)
@@ -69,6 +99,7 @@ export default function AnalisePage() {
     try {
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('perfil', perfil)
 
       const res = await fetch('/api/analisar', { method: 'POST', body: fd })
       const json = await res.json()
@@ -81,12 +112,12 @@ export default function AnalisePage() {
 
       const dados: ResultadoAnalise = json
 
-      // Salva no localStorage para a página de projetos
       try {
         const stored = JSON.parse(localStorage.getItem('mg_projetos') || '[]')
         stored.unshift({
           id: Date.now().toString(),
           criadoEm: new Date().toISOString(),
+          perfil_cnh: perfil,
           descricao_infracao: dados.extraido?.descricao_infracao || 'Infração',
           orgao_autuador: dados.extraido?.orgao_autuador || '—',
           artigo_ctb: dados.extraido?.artigo_ctb || '—',
@@ -116,6 +147,7 @@ export default function AnalisePage() {
 
   const resetForm = () => {
     removeFile()
+    setPerfil('')
     setResultado(null)
     setErro(null)
     setLoading(false)
@@ -123,6 +155,8 @@ export default function AnalisePage() {
     setProgress(0)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  const perfilSelecionado = PERFIS.find(p => p.id === perfil)
 
   return (
     <>
@@ -134,9 +168,72 @@ export default function AnalisePage() {
       </div>
 
       <div className="page">
+
+        {/* Step 1 — Perfil do condutor */}
         <div className="card">
           <div className="card-title">
-            <i className="ti ti-upload" aria-hidden="true" /> Enviar Notificação de Infração
+            <i className="ti ti-user-check" aria-hidden="true" /> Passo 1 — Perfil da CNH do Condutor
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
+            Selecione o tipo de habilitação para calcular o risco real de suspensão ou cassação.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {PERFIS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setPerfil(p.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '14px 16px',
+                  borderRadius: 10,
+                  border: `2px solid ${perfil === p.id ? p.cor : 'var(--border)'}`,
+                  background: perfil === p.id ? `${p.cor}15` : 'var(--card)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <i className={`ti ${p.icon}`} style={{ fontSize: 24, color: p.cor, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
+                    {p.label} — {p.sub}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                    {p.alerta}
+                  </div>
+                </div>
+                {perfil === p.id && (
+                  <i className="ti ti-circle-check" style={{ color: p.cor, fontSize: 20, flexShrink: 0 }} />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {perfilSelecionado && (
+            <div style={{
+              marginTop: 12,
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: `${perfilSelecionado.cor}10`,
+              border: `1px solid ${perfilSelecionado.cor}40`,
+              fontSize: 12,
+              color: 'var(--text)',
+            }}>
+              <strong>Perfil selecionado:</strong> {perfilSelecionado.label} ({perfilSelecionado.sub}) —{' '}
+              {perfil === 'ppd' && 'Cassação imediata com 1 grave/gravíssima ou 2 médias. Prazo de 2 anos reinicia do zero.'}
+              {perfil === 'definitiva' && 'Limite de 20, 30 ou 40 pts conforme infrações nos últimos 12 meses.'}
+              {perfil === 'ear' && 'Limite fixo de 40 pontos em qualquer situação. Suspensão impacta diretamente o sustento profissional.'}
+            </div>
+          )}
+        </div>
+
+        {/* Step 2 — Upload */}
+        <div className="card">
+          <div className="card-title">
+            <i className="ti ti-upload" aria-hidden="true" /> Passo 2 — Enviar Notificação de Infração
           </div>
 
           <div
@@ -176,11 +273,17 @@ export default function AnalisePage() {
             </div>
           )}
 
+          {!perfil && (
+            <p style={{ fontSize: 12, color: '#f59e0b', marginTop: 10, textAlign: 'center' }}>
+              ⚠ Selecione o perfil da CNH no Passo 1 antes de analisar
+            </p>
+          )}
+
           <button
             className="btn btn-primary btn-full"
             style={{ marginTop: 14 }}
             onClick={runAnalysis}
-            disabled={!file || loading}
+            disabled={!file || !perfil || loading}
           >
             {loading
               ? <><span className="spinner" /> Analisando...</>
